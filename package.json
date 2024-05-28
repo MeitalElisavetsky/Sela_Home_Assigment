@@ -6,11 +6,19 @@
     "license": "MIT",
     "main": "app.js",
     "keywords": [
-      "nodejs",
-      "bootstrap",
-      "express"
+        "nodejs",
+        "bootstrap",
+        "express"
     ],
     "dependencies": {
-      "express": "^4.16.4"
+        "express": "^4.16.4"
+    },
+    "devDependencies": {
+        "chai": "^5.1.1",
+        "mocha": "^10.4.0",
+        "supertest": "^7.0.0"
+    },
+    "scripts": {
+        "test": "mocha"
     }
-  }
+}
