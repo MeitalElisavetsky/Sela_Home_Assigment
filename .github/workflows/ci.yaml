@@ -28,14 +28,15 @@ jobs:
       - name: Generate Node.js version batches
         id: set_output
         run: |
-          versions=(${{ fromJson(inputs.node_versions) }})
+          IFS=',' read -ra versions <<< "${{ inputs.node_versions }}"
           batch_size=${{ inputs.batch_size }}
           batches=()
           for ((i=0; i<${#versions[@]}; i+=batch_size)); do
-            batch=${versions[@]:i:batch_size}
-            batches+=($(printf '%s\n' "${batch[@]}" | jq -c -R -s 'split("\n")[:-1]'))
+            batch=("${versions[@]:i:batch_size}")
+            batches+=("$(printf '%s\n' "${batch[@]}" | jq -c -R -s 'split("\n")[:-1]')")
           done
-          echo "::set-output name=node_version_batches::$(printf '%s\n' "${batches[@]}" | jq -c -s .)"
+          echo "::set-output name=node_version_batches::$(echo $batches)"
+
 
   build:
     needs: partition_versions
