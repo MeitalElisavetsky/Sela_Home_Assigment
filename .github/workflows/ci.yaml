@@ -8,19 +8,13 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened]
-  workflow_dispatch:
-    inputs:
-      node_versions:
-        description: 'Comma-separated list of Node.js versions to test'
-        required: true
-        default: '12.x,14.x,16.x'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ${{ split(inputs.node_versions, ',') }}
+        node-version: [12.x, 14.x, 16.x, 22.x]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
