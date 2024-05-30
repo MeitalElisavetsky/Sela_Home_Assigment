@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ${{ fromJson(inputs.node_versions) }}
+        node-version: ${{ split(inputs.node_versions, ',') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
