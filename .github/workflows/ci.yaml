@@ -14,36 +14,13 @@ on:
         description: 'Comma-separated list of Node.js versions to test'
         required: true
         default: '12.x,14.x,16.x'
-      batch_size:
-        description: 'Number of versions to test in parallel'
-        required: true
-        default: '5'
 
 jobs:
-  partition_versions:
-    runs-on: ubuntu-latest
-    outputs:
-      node_version_batches: ${{ steps.set_output.outputs.node_version_batches }}
-    steps:
-      - name: Generate Node.js version batches
-        id: set_output
-        run: |
-          IFS=',' read -ra versions <<< "${{ inputs.node_versions }}"
-          batch_size=${{ inputs.batch_size }}
-          batches=()
-          for ((i=0; i<${#versions[@]}; i+=batch_size)); do
-            batch=("${versions[@]:i:batch_size}")
-            batches+=("$(printf '%s\n' "${batch[@]}" | jq -c -R -s 'split("\n")[:-1]')")
-          done
-          echo "::set-output name=node_version_batches::$(echo $batches)"
-
-
   build:
-    needs: partition_versions
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version-batch: ${{ fromJson(needs.partition_versions.outputs.node_version_batches) }}
+        node-version: ${{ fromJson(inputs.node_versions) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -67,6 +44,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
@@ -74,7 +54,7 @@ jobs:
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/am-israel-hai .
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/am-israel-hai 
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/am-israel-hai:latest
 
   deploy:
     needs: build_docker
