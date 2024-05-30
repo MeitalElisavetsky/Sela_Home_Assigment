@@ -4,16 +4,10 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'application/**'
-      - 'Dockerfile'
   pull_request:
     branches:
       - main
     types: [opened, synchronize, reopened]
-    paths:
-      - 'application/**'
-      - 'Dockerfile'
   workflow_dispatch:
     inputs:
       node_versions:
