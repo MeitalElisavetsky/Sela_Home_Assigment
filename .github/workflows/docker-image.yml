@@ -1,0 +1,88 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'application/**'
+      - 'Dockerfile'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'application/**'
+      - 'Dockerfile'
+  workflow_dispatch:
+    inputs:
+      node_versions:
+        description: 'Comma-separated list of Node.js versions to test'
+        required: true
+        default: '12.x,14.x,16.x'
+      batch_size:
+        description: 'Number of versions to test in parallel'
+        required: true
+        default: '5'
+
+jobs:
+  partition_versions:
+    runs-on: ubuntu-latest
+    outputs:
+      node_version_batches: ${{ steps.set_output.outputs.node_version_batches }}
+    steps:
+      - name: Generate Node.js version batches
+        id: set_output
+        run: |
+          versions=(${{ fromJson(inputs.node_versions) }})
+          batch_size=${{ inputs.batch_size }}
+          batches=()
+          for ((i=0; i<${#versions[@]}; i+=batch_size)); do
+            batch=${versions[@]:i:batch_size}
+            batches+=($(printf '%s\n' "${batch[@]}" | jq -c -R -s 'split("\n")[:-1]'))
+          done
+          echo "::set-output name=node_version_batches::$(printf '%s\n' "${batches[@]}" | jq -c -s .)"
+
+  build:
+    needs: partition_versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version-batch: ${{ fromJson(needs.partition_versions.outputs.node_version_batches) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version-batch }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  build_docker:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ success() }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/am-israel-hai .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/am-israel-hai 
+
+  deploy:
+    needs: build_docker
+    uses: ./.github/workflows/deploy.yaml
+    with:
+      ref: ${{ github.ref }}
