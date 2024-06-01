@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x, 14.x, 16.x, 22.x]
+        node-version: [12.x, 14.x, 16.x, 18.x]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -30,10 +30,9 @@ jobs:
       - name: Run tests
         run: npm test
 
-  build_docker:
+  build_docker_image:
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ success() }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -41,17 +40,30 @@ jobs:
       - name: Set Up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/am-israel-hai .
+
+      - name: Save Docker image metadata
+        id: docker_meta
+        run: echo "image_built=true" >> $GITHUB_ENV
+
+  push_docker_image:
+    runs-on: ubuntu-latest
+    needs: build_docker_image
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/am-israel-hai:latest
 
   deploy:
-    needs: build_docker
+    needs: push_docker_image
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy.yaml
     with:
       ref: ${{ github.ref }}
