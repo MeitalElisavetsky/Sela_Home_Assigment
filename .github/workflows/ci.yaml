@@ -42,10 +42,9 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/am-israel-hai .
-
-      - name: Save Docker image metadata
-        id: docker_meta
-        run: echo "image_built=true" >> $GITHUB_ENV
+      
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Push Docker image
         if: github.ref == 'refs/heads/main'  # Only push if on the main branch
