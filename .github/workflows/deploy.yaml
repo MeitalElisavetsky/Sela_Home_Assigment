@@ -1,10 +1,19 @@
-name: Deploy
+name: Deploy to Platform
 
-on: workflow_call
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+        default: ""
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploying to platform
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Print deploy message
         run: echo "Deploying to platform"
